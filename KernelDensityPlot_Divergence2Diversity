@@ -1,0 +1,216 @@
+library(ggbio)
+library(IRanges)
+library(Gviz)
+library(IRanges) 
+library(GenomicRanges) 
+library(rtracklayer) 
+library(adegenet)
+library(MASS)
+library(ks)
+library(feature)
+############################
+### DENSITY PLOTS###########
+############################
+##DIVERSITY vs DIVERGENCE ##
+############################
+## VS Microtus Richardsoni #
+############################
+
+
+setwd("C:/Users/Alejandro/Desktop/NEW PHAST/Population")
+
+# LOADING Pi and K for SIMULATED ALIGNMENT 
+# This sequence was simulated using BASE_EVOLVE from PHAST
+# I used a NEUTRAL MODEL OF EVOLUTION (PhyloFit) AND A NEUTRAL GENE ALIGNMENT (LCAT)
+
+Simul = read.table("SIMUL_PK_MRICH.txt", sep="\t", header=TRUE)  
+Simul <- as.data.frame(Simul)
+dim(Simul)
+# 2-dimentional kernel density estimation for the simulation
+dens <- kde2d(Simul$Pi,Simul$K, n=2000, lims = c(-0.1, 0.021, -0.1, 0.09)) 
+myPal<- colorRampPalette(c("lightblue", "darkblue", "gold", "orange", "red"))
+
+
+# In case simulated data is not available!
+# loading Pi and K for neutral alignment (i.e. putatively neutral loci)
+
+#neutral = read.table("NEUTRAL_PK_MRICH.txt", sep="\t", header=TRUE)  
+#neutral <- as.data.frame(neutral)
+#dim(neutral)
+
+# 2-dimentional kernel density estimation for the neutral GENES
+#dens1 <- kde2d(neutral$Pi,neutral$K, n=1000, lims = c(-0.1, 0.021, -0.1, 0.09)) 
+#myPal<- colorRampPalette(c("lightblue", "darkblue", "gold", "orange", "red"))
+
+# Loading Pi and K for AVPR1A alignment  
+# This Data can be generated in DNASP (http://www.ub.edu/dnasp/) and/or SLIDER (http://genapps.uchicago.edu/slider/index.html)
+# If you have multiple individuals and an outgroup species
+
+
+All=read.table("AVPR1A_PK_MRICH.txt", sep="\t", header=TRUE)  
+head(All)
+All <- as.data.frame(All)
+head(All)
+
+# NS = Number of polymorphisms in neutral loci
+# ND = Number of fixed differences in neutral loci
+# SS = Number of polymorphisms in respective window in simulated data
+# SD = Number offixed differences in respective window in simulated data
+
+
+> head(All)
+  coor      Pi       K S  D NS ND SS SD
+1  152 0.00374 0.06033 5 17 30 30 19 10
+2  153 0.00374 0.06033 5 17 30 30 19 10
+3  154 0.00374 0.06033 5 17 30 30 19 10
+4  155 0.00374 0.06033 5 17 30 30 19 10
+5  156 0.00374 0.06033 5 17 30 30 19 10
+6  157 0.00374 0.06033 5 17 30 30 20 10
+
+
+#data <- rbind(All[ which(All$coor>=1 & All$coor <= 1100),], All[ which(All$coor>=1450 & All$coor <= 7742),])
+
+dim(All)
+
+# To generate a color-coded list by locus elements of interest 
+# coding sequence is blue
+# H3K27ac chromatin peak 1 is darkorange
+# H3K27ac chromatin peak 2 is yellow
+
+
+N<-nrow(All)
+colorspot<-c()
+for(i in 1:N){
+  if (  All$coor[i] >= 1  &  All$coor[i] <= 450) 
+  {x = 'darkorange'}
+  else
+    if (All$coor[i] >= 550  &  All$coor[i] <= 1100) 
+    {x = 'yellow'}
+  else    
+    if (All$coor[i] >= 2358  &  All$coor[i] <= 3333) 
+    {x = 'blue'}
+  else
+    if (All$coor[i] >= 4400  &  All$coor[i] <= 5100) 
+    {x = 'darkgreen'}
+  else
+    if (All$coor[i] >= 5662  &  All$coor[i] <= 5947) 
+    {x = 'blue'}
+  else
+  {x = 'grey'}
+  colorspot<-c(colorspot, x)
+}
+
+
+
+plot(All$Pi,All$K, col="white", pch=20, xlim=c(0, 0.02), ylim=c(0, 0.08), xlab = expression(paste("Diversity (",pi,")")), ylab = "Divergence (K)")
+title("Avpr1a Diversity vs Divergence")
+image(dens, col=transp(myPal(1000),0.45), add=TRUE)
+
+
+# the abline values are the average of diversity and divergence in the simulation
+
+abline(v= 0.00734, h=0.03108, lty=3)
+points(All$Pi,All$K, col="black", bg=colorspot, pch=21)
+
+
+# To calculate fisher Exact test in sliding window
+
+
+#Fisher exact test for putatively neutral data
+N<-nrow(All)
+fishersN<-c()
+for(i in 1:N){
+  df = matrix(c(All$S[i],All$NS[i],All$D[i],All$ND[i]), nrow = 2)
+  x <- fisher.test(df)
+  fishersN<-c(fishersN, x$p.value)
+}
+data <- data.frame(coor=All$coor, Pi= All$Pi, K=All$K, pval= fishersN)
+
+#Fisher exact test for simulated neutral data
+N<-nrow(All)
+fishers2<-c()
+for(i in 1:N){
+  challenge.df = matrix(c(All$S[i],All$SS[i],All$D[i],All$SD[i]), nrow = 2)
+  x <- fisher.test(challenge.df)
+  fishers2<-c(fishers2, x$p.value)
+}
+data2 <- data.frame(coor=All$coor, Pi= All$Pi, K=All$K, pval= fishers2)
+
+
+> head(data2)
+  coor      Pi       K        pval
+1  152 0.00374 0.06033 0.004236759
+2  153 0.00374 0.06033 0.004236759
+3  154 0.00374 0.06033 0.004236759
+4  155 0.00374 0.06033 0.004236759
+5  156 0.00374 0.06033 0.004236759
+6  157 0.00374 0.06033 0.002251759
+
+
+#Fisher exact test output for putatively neutral data
+fisherMrich <- cbind(data$coor, data$pval)
+write.csv(fisherMrich, file="fisherMrich.csv")
+
+#Fisher exact test output for simulated neutral data
+fisherMrich2 <- cbind(data2$coor, data2$pval)
+write.csv(fisherMrich2, file="fisherMrich2.csv")
+
+
+
+
+#This data set has to be modified in Excel to caculate -LOG(pval) and convert to wig using Gviz
+
+
+
+#MRICHARDSONI
+#Diversity
+setwd("C:/Users/Alejandro/Desktop/NEW PHAST")
+
+piMRICH <- import.wig("pi_DNAspMRICH.wig")
+piMRICHTrack <- DataTrack(piMRICH, showAxis=TRUE, name = "Diversity (pi)", 
+                          legend = TRUE, type = "l", col= 'black', ylim = c(0,0.02), baseline=0, lty.baseline= 1, col.baseline="black")
+#Divergence
+KMRICH <- import.wig("K_Mrich.wig")
+KTrackMRICH <- DataTrack(KMRICH, showAxis=TRUE,  name = "Divergence (K)", 
+                         type = "l", col= 'black', ylim = c(0,0.1),
+                         legend = TRUE,  baseline=0, lty.baseline= 1, col.baseline="black")
+
+#P
+
+
+#Pvalues MK Test signifance against real data
+fisherMrich <- import.wig("fisherMrich.wig")
+fisherMrichTrack <- DataTrack(fisherMrich, showAxis=TRUE, name = "MKT (-Log(pvalue))", legend = TRUE, type = "l", col= 'black', ylim = c(0,2), lty.baseline= c(1,2),baseline=c(0,1.30103), col.baseline="black")
+
+#Pvalue  based on simulation
+fisherMrich4 <- import.wig("fisherMrich4.wig")
+fisherMrich4Track <- DataTrack(fisherMrich4, showAxis=TRUE, name = "MKT (-Log(pvalue))", legend = TRUE, type = "a", col= 'black', ylim = c(0,3), lty.baseline= c(1,2),baseline=c(0,1.30103), col.baseline="black")
+
+
+######################
+##MAKING GENE TRACKS##
+
+geneTrack <- AnnotationTrack(start = c(2358, 5661), end=c(3333, 5947), col='black', fill="green", strand = rep(c("*")), id = c("Exon 1", "Exon 2"),  group = rep(c("avpr1a"), c(1)), details.size = 0.5, detailsConnector.cex = 0.5, name = "avpr1a", chromosome = "chr")
+gTrack<- GeneRegionTrack(rstart = c(2358, 5661), rend=c(3333, 5947), col='black', fill="blue", strand='+', chromosome='chr', stream=FALSE)
+UTRTrack <- AnnotationTrack(start = c(2125, 5948), end=c(2357, 6320), col='black', fill="lightblue", id = c("5'UTR", "3'UTR"), details.size = 0.5, detailsConnector.cex = 0.5, name = "UTRs", chromosome = "chr")
+msatTrack <- AnnotationTrack(start = c(430, 1068, 3358), end=c(532, 1468, 3458), fill="white", col='black', id = c("Msat II", "Msat I", "Msat III"), details.size = 0.5, detailsConnector.cex = 0.5, name = "MicroSat", chromosome = "chr")
+assoTrack <- AnnotationTrack(start = c(966, 4527, 5033, 5863), end=c(966, 4527, 5033, 5863), fill="orange", col='orange', details.size = 0.5, detailsConnector.cex = 0.5, name = "associated", chromosome = "chr")
+
+otgene <-OverlayTrack(list(gTrack, UTRTrack, msatTrack), background.title='white')
+ax <- GenomeAxisTrack(range=IRanges(start=c(2358,5661),  end=c(3333, 5947)), col='black', names = rep(c("CDS1", "CDS2")))
+
+###############
+##PLOT TRACKS##
+
+plotTracks(list(
+  piMRICHTrack,KTrackMRICH,
+  fisherMrich4Track,
+  otgene, ax), 
+  col.border.title='white', background.panel='white', 
+  background.title = 'white', col.axis='black', 
+  col.title="black", frame=FALSE, grid=FALSE, showId=FALSE)
+
+
+
+
+
