@@ -1,0 +1,113 @@
+##################################################################################################
+# THIS PIPELINE DESCRIBE CONSERVATION ANALYSIS TO FIND SIGNATURES OF SELECTION AT THE PHYLOGENETIC
+# LEVEL USING THE LIBRARY RPHAST (PHAST command lines are included)
+################################ 
+
+
+
+library(ggbio)
+library(seqinr)
+library(rphast)
+library(ape)
+library(IRanges)
+library(Gviz)
+library(IRanges) 
+library(GenomicRanges) 
+library(rtracklayer) 
+library(adegenet)
+library(MASS)
+library(twilight)
+library(qvalue)
+library(fdrci)
+library(fdrtool)
+
+###############
+
+
+
+
+pcMAMMALc <- phastCons(Mammalian_avpr1a, neutralModMAMMALIAN, expected.length=60, target.coverage=0.125, viterbi=TRUE)
+
+pcRodentc <- phastCons(Rodent_avpr1a, neutralModRODENTIA, expected.length=60, target.coverage=0.125, viterbi=TRUE)
+pcRodentc2 <- phastCons(Rodent_avpr1a2, neutralModRODENTIA, expected.length=60, target.coverage=0.125, viterbi=TRUE)
+pcRodentc3 <- phastCons(Rodent_avpr1a3, neutralModRODENTIA3, expected.length=60, target.coverage=0.125, viterbi=TRUE)
+
+pcArvico7 <- phastCons(Arvicolini_avpr1a, neutralModARVICOLINI, expected.length=60, target.coverage=0.15, viterbi=TRUE)
+pcArvico8 <- phastCons(Arvicolini_avpr1a, neutralModARVICOLINI, expected.length=250, target.coverage=0.75, viterbi=TRUE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+setwd("F:/RESEARCH/PHAST/RPHAST")
+
+#DNase I Hypersensitivity sites from ENCODE Mice
+
+WIGbrain <- import.wig("BrainTarget.wig")
+braintrack <- DataTrack(WIGbrain,col= 'black', baseline=0,   col= "grey", type = "h", window=7742,  ylim = c(0,100), fontcolor="black", size=5, col.baseline="black")
+
+# Phastcones from ENCODE Mice transformed to Prairie vole positions
+
+WIGPhasCons <- import.wig("TargetPhasCons.wig")
+PhasConstrack <- DataTrack(WIGPhasCons, baseline=0, col.baseline="black", name = "Mammal PhasCons ENCODE", type = "h", col= 'grey',  size=5)
+
+#Import data and make Tracks for Mammals New
+setwd("C:/Users/Alejandro/Desktop/NEW PHAST")
+
+MammWIGMammPhastConsc <- import.wig("MammPhastConsc.wig")
+MammPhasConstrackc <- DataTrack(MammWIGMammPhastConsc, baseline=0, col.baseline="black", name = "Mammal PhasCons", type = "h", col= 'black',  size=5)
+
+#Import data and make Tracks for Glires
+GliWIGGliPhastConsc <- import.wig("GliPhastCons.wig")
+GliPhasConstrack <- DataTrack(GliWIGGliPhastConsc, baseline=0, col.baseline="black", name = "Rodent PhasCons", type = "h", col= 'black',  size=5)
+
+#Import data and make Tracks for Arvicoline
+ArviWIGArviPhastCons <- import.wig("ArviPhastCons.wig")
+ArviPhasConstrack <- DataTrack(ArviWIGArviPhastCons, baseline=0, col.baseline="black", name = "Vole PhasCons", type = "h", col= 'black',  size=5)
+
+#AVPR1A
+setwd("C:/Users/Alejandro/Desktop/NEW CHIPSEQ/q0.05")
+#AVPR1A mappend with a false discovery rate at 5%
+VPpeakTrack <- AnnotationTrack(start = c(55, 630), end=c(179,864), fill="black", col='black', details.size = 0.5, detailsConnector.cex = 0.5, name = "H3K27ac", chromosome = "chr")
+
+VPALL <- import.wig("VP_avpr1a_ChIPq0.05.wig")
+VPALLtrack <- DataTrack(VPALL, baseline=1,  name = "H3K27ac Vpall", type="l", ylim = c(1,10), col= 'black',  size=5)
+
+###############
+##GENE TRACKS##
+
+
+geneTrack <- AnnotationTrack(start = c(2358, 5661), end=c(3333, 5947), col='black', fill="green", strand = rep(c("*")), id = c("Exon 1", "Exon 2"),  group = rep(c("avpr1a"), c(1)), details.size = 0.5, detailsConnector.cex = 0.5, name = "avpr1a", chromosome = "chr")
+gTrack<- GeneRegionTrack(rstart = c(2358, 5661), rend=c(3333, 5947), col='black', fill="blue", strand='+', chromosome='chr', stream=FALSE)
+UTRTrack <- AnnotationTrack(start = c(2125, 5948), end=c(2357, 6320), col='black', fill="lightblue", id = c("5'UTR", "3'UTR"), details.size = 0.5, detailsConnector.cex = 0.5, name = "UTRs", chromosome = "chr")
+msatTrack <- AnnotationTrack(start = c(430, 1068, 3358), end=c(532, 1468, 3458), fill="white", col='black', id = c("Msat II", "Msat I", "Msat III"), details.size = 0.5, detailsConnector.cex = 0.5, name = "MicroSat", chromosome = "chr")
+ax <- GenomeAxisTrack(range=IRanges(start=c(2358,5661),  end=c(3333, 5947)), col='black', names = rep(c("CDS1", "CDS2")))
+
+
+otgene <-OverlayTrack(list(gTrack, UTRTrack, msatTrack), background.title='white')
+
+
+plotTracks(list(braintrack, MammPhasConstrackc,GliPhasConstrack,ArviPhasConstrack,  
+                VPALLtrack, VPpeakTrack, otgene,
+                ax), 
+           col.border.title='white', background.panel='white', 
+           background.title = 'white', col.axis='black', 
+           col.title="black", frame=FALSE, grid=FALSE, showId=FALSE)
+
+
+
+
+
+
+
